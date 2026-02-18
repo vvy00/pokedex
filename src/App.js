@@ -2,47 +2,103 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
+  // State for the current Pokemon data
   const [pokemon, setPokemon] = useState(null);
+  // State for the loading spinner
   const [loading, setLoading] = useState(true);
+  // State for the user's search input
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Function to fetch a random Pokemon
-  const fetchRandomPokemon = async () => {
+  // The main function to talk to the PokeAPI
+  const fetchPokemon = async (nameOrId) => {
     setLoading(true);
     try {
-      // Pick a random ID between 1 and 1025
-      const randomId = Math.floor(Math.random() * 1025) + 1;
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
-      const data = await response.json();
+      // PokeAPI is case-sensitive for names, so we use .toLowerCase()
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${nameOrId.toLowerCase()}`);
       
+      if (!response.ok) {
+        throw new Error("Pokemon not found");
+      }
+
+      const data = await response.json();
       setPokemon(data);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching Pokemon:", error);
+      alert("Pokemon not found! Please check the spelling or ID.");
       setLoading(false);
     }
   };
 
-  // Run this once when the page first loads
+  // Helper to get a random Pokemon
+  const handleRandom = () => {
+    const randomId = Math.floor(Math.random() * 1025) + 1;
+    fetchPokemon(randomId.toString());
+  };
+
+  // Helper to handle the search form submission
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      fetchPokemon(searchQuery);
+    }
+  };
+
+  // Milestone 1 & 2: Load a Pokemon when the app first starts
   useEffect(() => {
-    fetchRandomPokemon();
+    fetchPokemon('1'); // Starting with Bulbasaur
   }, []);
 
   return (
     <div className="App">
-      <h1>My Pokedex</h1>
-      
+      <h1>Pokédex</h1>
+
+      {/* Search Bar Section */}
+      <form onSubmit={handleSearch} className="search-container">
+        <input 
+          type="text" 
+          placeholder="Enter Name or ID" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      {/* Random Button */}
+      <button onClick={handleRandom} style={{ marginTop: '10px' }}>
+        Get Random Pokemon
+      </button>
+
+      {/* Conditional Rendering: Show "Loading" or the Pokemon Card */}
       {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <div className="poke-card">
-          <h2>{pokemon.name.toUpperCase()}</h2>
-          <img 
-            src={pokemon.sprites.other['official-artwork'].front_default} 
-            alt={pokemon.name} 
-          />
-          <p>Type: {pokemon.types.map(t => t.type.name).join(', ')}</p>
-          <button onClick={fetchRandomPokemon}>Get Random Pokemon</button>
+        <div className="loading">
+          <p>Searching the tall grass...</p>
         </div>
+      ) : (
+        pokemon && (
+          <div className="poke-card">
+            <div className="poke-id">#{pokemon.id}</div>
+            <h2>{pokemon.name.toUpperCase()}</h2>
+            
+            <img 
+              src={pokemon.sprites.other['official-artwork'].front_default} 
+              alt={pokemon.name} 
+              className="pokemon-image"
+            />
+
+            <div className="types">
+              {pokemon.types.map((t) => (
+                <span key={t.type.name} className="type-badge">
+                  {t.type.name}
+                </span>
+              ))}
+            </div>
+
+            <div className="stats">
+              <p><strong>Height:</strong> {pokemon.height / 10}m</p>
+              <p><strong>Weight:</strong> {pokemon.weight / 10}kg</p>
+            </div>
+          </div>
+        )
       )}
     </div>
   );
